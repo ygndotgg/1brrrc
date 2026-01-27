@@ -3,16 +3,24 @@ use std::{
     collections::{BTreeMap, HashMap},
     fs::File,
     io::{BufRead, BufReader},
+    os::fd::AsRawFd,
+    ptr,
 };
+
+use libc::{MADV_SEQUENTIAL, MAP_SHARED, PROT_READ, PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP};
 
 // Oklahoma City;-1.0
 pub fn main() {
     let f = File::open("memnts.txt").unwrap();
-    let f = BufReader::new(f);
+    let f = mmamp(&f);
+    // let f = BufReader::new(f);
     let mut hmap: HashMap<Vec<u8>, (f64, usize, f64, f64)> = HashMap::new();
-    for k in f.split(b'\n') {
-        let k = k.unwrap();
+    for k in f.split(|a| *a == b'\n') {
+        if k.is_empty() {
+            break;
+        }
         let mut k = k.rsplitn(2, |k| *k == b';');
+
         let temp = k.next().unwrap();
         let city = k.next().unwrap();
         let stats = match hmap.get_mut(city) {
@@ -40,4 +48,28 @@ pub fn main() {
         }
     }
     print!("}}");
+}
+
+fn mmamp(f: &File) -> &[u8] {
+    let len = f.metadata().unwrap().len();
+    unsafe {
+        let ptr = libc::mmap(
+            ptr::null_mut(),
+            len as usize,
+            PROT_READ,
+            MAP_SHARED,
+            f.as_raw_fd(),
+            0,
+        );
+
+        if ptr == libc::MAP_FAILED {
+            panic!("{:?}", std::io::Error::last_os_error());
+        } else {
+            if libc::madvise(ptr, len as libc::size_t, MADV_SEQUENTIAL) != 0 {
+                panic!("{:?}", std::io::Error::last_os_error());
+            }
+        }
+
+        std::slice::from_raw_parts(ptr as *const u8, len as usize)
+    }
 }

@@ -7,5 +7,5 @@ edition = "2024"
 lto="fat"
 debug=true
 panic="abort"
-
 [dependencies]
+libc = "0.2.180"
