@@ -1,12 +1,41 @@
+#![feature(portable_simd)]
+#![feature(slice_split_once)]
 use std::{
     collections::{BTreeMap, HashMap},
     ffi::{c_int, c_void},
     fs::File,
+    hash::{BuildHasher, Hasher},
     os::fd::AsRawFd,
-    ptr,
+    ptr, // simd::cmp::SimdPartialEq,
 };
 
 use libc::{MADV_SEQUENTIAL, MAP_SHARED, PROT_READ};
+
+#[derive(Clone, Default)]
+struct FastHashBuilder;
+struct FastHasher(u64);
+
+impl BuildHasher for FastHashBuilder {
+    type Hasher = FastHasher;
+    fn build_hasher(&self) -> Self::Hasher {
+        FastHasher(0xcbf29ce474222325)
+    }
+}
+
+impl Hasher for FastHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        let (chunks, remainder) = bytes.as_chunks::<8>();
+        let mut padd = [1u8; 8];
+        (padd[..remainder.len()]).copy_from_slice(remainder);
+        for &chunk in chunks.iter().chain(std::iter::once(&padd)) {
+            let mixed = self.0 as u128 * u64::from_ne_bytes(chunk) as u128;
+            self.0 = (mixed >> 64) as u64 ^ mixed as u64
+        }
+    }
+}
 
 // Oklahoma City;-1.0
 pub fn main() {
@@ -14,7 +43,9 @@ pub fn main() {
     let f = mmamp(&f);
 
     // let f = BufReader::new(f);
-    let mut hmap: HashMap<Vec<u8>, (i16, usize, i16, i16)> = HashMap::new();
+    //
+    let mut hmap: HashMap<Vec<u8>, (i16, usize, i16, i16), FastHashBuilder> =
+        HashMap::with_capacity_and_hasher(100000, FastHashBuilder);
     let mut at = 0;
     loop {
         let rest = &f[at..];
@@ -30,10 +61,9 @@ pub fn main() {
         if k.is_empty() {
             break;
         }
-        let mut k = k.rsplitn(2, |k| *k == b';');
+        // let (city, temp) = splitsc(k);
+        let (city, temp) = k.rsplit_once(|d| *d == b'\t').unwrap();
 
-        let temp = k.next().unwrap();
-        let city = k.next().unwrap();
         let stats = match hmap.get_mut(city) {
             Some(k) => k,
             None => hmap
@@ -112,3 +142,23 @@ fn pparse(temp: &[u8]) -> i16 {
     }
     t
 }
+
+// fn splitsc(k: &[u8]) -> (&[u8], &[u8]) {
+//     if k.len() > 64 {
+//         k.rsplit_once(|d| *d == b'\t').unwrap()
+//     } else {
+//         let delim = STALE.simd_eq(std::simd::u8x64::load_or_default(k));
+//         let index = unsafe { delim.first_set().unwrap_unchecked() };
+//         (&k[..index], &k[index + 1..])
+//     }
+// }
+//
+//
+// #[inline(always)]
+// fn splitsc(k: &[u8]) -> (&[u8], &[u8]) {
+//     let i =
+//         unsafe { libc::memrchr(k.as_ptr() as *const c_void, b'\t' as c_int, k.len()) } as *const u8;
+
+//     let idx = unsafe { i.offset_from(k.as_ptr()) as usize };
+//     (&k[..idx], &k[idx + 1..])
+// }
