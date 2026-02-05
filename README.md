@@ -209,7 +209,7 @@ This project is a competitive entry to the **One Billion Row Challenge**, demons
 - Multi-threaded coordination with work distribution
 - Challenge constraint adherence: pure standard library + minimal kernel interface
 
-**Philosophy**: Achieve maximum performance while staying within challenge rules. Every optimization is justified by the extreme scale (1 billion rows = 100+ GB data).
+**Philosophy**: Achieve maximum performance while staying within challenge rules. Every optimization is justified by the extreme scale (1 billion rows = 13+ GB data).
 
 ## One Billion Row Challenge
 
@@ -222,7 +222,7 @@ This Rust solution exemplifies the performance capabilities of systems-level opt
 
 ## Inspiration & Implementation
 
-This implementation is based on **Jon Gjengset's** exceptional [Rust 1BRC video](https://www.youtube.com/watch?v=WnDTrg4M_x8), which breaks down advanced systems programming techniques for optimal performance. The video demonstrates:
+This implementation is based on **Jon Gjengset's** exceptional [Rust 1BRC video](https://youtu.be/tCY7p6dVAGE?si=Cr0p9dWseJze_Vvm), which breaks down advanced systems programming techniques for optimal performance. The video demonstrates:
 
 - SIMD vectorization strategies
 - Memory mapping and OS-level optimizations
