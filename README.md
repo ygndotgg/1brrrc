@@ -26,7 +26,7 @@ This solution showcases advanced systems programming in Rust with SIMD, memory m
 
 ### Benchmark Results
 
-The program executes in approximately **3.29 seconds** processing standard weather station datasets.
+The program executes in approximately **3.29 seconds** processing One Billon Row Challenge dataset 13Gb text file
 
 ![Hyperfine Benchmark](benchmark.png)
 
